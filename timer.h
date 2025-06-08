@@ -10,6 +10,8 @@ class Timer {
     public:
     Timer();
     void dec();
+    void set(Byte value);
+    Byte get() const;
 };
 
 class DelayTimer : public Timer {

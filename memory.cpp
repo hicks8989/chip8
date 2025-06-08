@@ -16,7 +16,12 @@ Instruction RAM::fetch(AddressReg *pc) const {
     return lo | ((Instruction)hi << 8);
 }
 
-Byte RAM::read(Address addr) const {
+void RAM::store(Address addr, Byte value) {
+    assert(addr < 4096);
+    memory[addr] = value;
+}
+
+Byte RAM::load(Address addr) const {
     assert(addr < 4096);
     return memory[addr];
 }

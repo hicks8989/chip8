@@ -5,6 +5,7 @@
 # include "byte.h"
 # include "display.h"
 # include "memory.h"
+# include "peripherals.h"
 # include "register.h"
 # include "stack.h"
 # include "timer.h"
@@ -12,6 +13,9 @@
 // Random generator
 static std::random_device rd;
 static std::mt19937 gen(rd());
+
+// Superchip variable
+static bool superchip = false;
 
 // Registers
 static Reg *V0 = new Reg();
@@ -45,13 +49,16 @@ static AddressReg *PC = new AddressReg();
 static AddressReg *I = new AddressReg();
 
 // Function Stack
-static Stack *functionStack;
+static Stack *functionStack = new Stack();
 
 // RAM
-static RAM *ram;
+static RAM *ram = new RAM();
 
 // Display
 static Display *display;
+
+// Keyboard
+static Keyboard *keyboard;
 
 // Delay Timer
 static DelayTimer *delayTimer;
@@ -170,7 +177,7 @@ void setIndex(Address NNN) {
     I->write(NNN);
 }
 
-void jumpWithOffset(Address NNN, bool superchip) {
+void jumpWithOffset(Address NNN) {
     Address address;
     Nibble X = (0xF00 & NNN) >> 8;
     Reg *VX = superchip ? registers[X] : registers[0];
@@ -192,11 +199,90 @@ void draw(Reg *VX, Reg *VY, Nibble N) {
     Address addr = I->read();
 
     for (int i = 0; i < N; i++) {
-        sprites[i] = ram->read(addr++);
+        sprites[i] = ram->load(addr++);
     }
 
     Bit flag = display->draw(VX, VY, sprites, N);
     VF->write_flag(flag);
+}
+
+void skipIfPressed(Reg *VX, bool skipIfEqual) {
+    Byte key;
+    Byte value = VX->read();
+    bool keyIsPressed = keyboard->getKey(key);
+
+    if (keyIsPressed && skipIfEqual && key == value) {
+        PC->write(PC->read() + 2);
+    }
+
+    if (!skipIfEqual && (!keyIsPressed || key != value)) {
+        PC->write(PC->read() + 2);
+    }
+}
+
+void loadDelayTimer(Reg *VX) {
+    Byte value = delayTimer->get();
+    VX->write(value);
+}
+
+void setTimer(Reg *VX, Timer *timer) {
+    Byte value = VX->read();
+    timer->set(value);
+}
+
+void addToIndex(Reg *VX) {
+    Byte value = VX->read();
+    I->write(I->read() + value);
+}
+
+void getKey(Reg *VX) {
+    Byte key;
+
+    if (keyboard->getKey(key)) {
+        VX->write(key);
+    } else {
+        PC->write(PC->read() - 2);
+    }
+}
+
+void fontCharacter(Reg *VX) {
+    Byte value = VX->read();
+    setIndex(value);
+}
+
+void binaryCodedDecimalConversion(Reg *VX) {
+    Byte value = VX->read();
+    Address addr = I->read();
+    
+    for (int i = 2; i >= 0; i--) {
+        ram->store(addr + i, value % 10);
+        value /= 10;
+    }
+}
+
+void store(Nibble X) {
+    Reg *reg;
+    Address addr = I->read();
+
+    for (int i = 0; i <= X; i++) {
+        reg = registers[i];
+        ram->store(addr++, reg->read());
+    }
+}
+
+void load(Nibble X) {
+    Reg *reg;
+    Address addr = I->read();
+
+    for (int i = 0; i <= X; i++) {
+        reg = registers[i];
+        reg->write(ram->load(addr++));
+    }
+}
+
+// Instruction Fetch
+Instruction fetch() {
+    return ram->fetch(PC);
 }
 
 // Instruction Decode
@@ -239,10 +325,14 @@ void decode(Instruction instruction) {
 }
 
 int main(int argc, char *argv[]) {
+    if (argc >= 2 && argv[1] == "--superchip") {
+        superchip = true;
+    }
 
+    display = new Display(superchip);
 
     while (true) {
-        Instruction instruction = ram->fetch(PC);
+        Instruction instruction = fetch();
         decode(instruction);
     }
 }

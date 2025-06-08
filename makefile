@@ -1,6 +1,6 @@
 CXX         = c++ -std=c++17
 CXXFLAGS    = -g -Wall
-OBJS        = display.o memory.o register.o timer.o
+OBJS        = chip8.o display.o memory.o peripherals.o register.o timer.o
 PROG        = chip8
 
 all:        $(PROG)
