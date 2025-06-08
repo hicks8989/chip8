@@ -4,7 +4,7 @@
 # include <cstdint>
 
 typedef bool Bit;
-typedef uint8_t Byte;
-typedef uint16_t Address;
+typedef uint8_t Nibble, Byte;
+typedef uint16_t Address, Instruction;
 
 #endif

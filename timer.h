@@ -1,8 +1,15 @@
 # ifndef TIMER_H
 # define TIMER_H
 
-class Timer {
+# include "byte.h"
 
+class Timer {
+    private:
+    Byte timer;
+
+    public:
+    Timer();
+    void dec();
 };
 
 class DelayTimer : public Timer {

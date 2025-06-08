@@ -18,6 +18,7 @@ class Register {
 typedef Register<Byte> Reg;
 
 class AddressReg : public Register<Address> {
+    public:
     virtual void write(Address byte);
     virtual Address read() const;
 };
