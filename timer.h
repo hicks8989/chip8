@@ -5,4 +5,12 @@ class Timer {
 
 };
 
+class DelayTimer : public Timer {
+
+};
+
+class SoundTimer : public Timer {
+
+};
+
 #endif
