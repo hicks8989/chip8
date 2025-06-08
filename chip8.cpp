@@ -1,4 +1,5 @@
 # include <cassert>
+# include <random>
 # include <vector>
 
 # include "byte.h"
@@ -7,6 +8,10 @@
 # include "register.h"
 # include "stack.h"
 # include "timer.h"
+
+// Random generator
+static std::random_device rd;
+static std::mt19937 gen(rd());
 
 // Registers
 static Reg *V0 = new Reg();
@@ -60,10 +65,12 @@ void clearScreen() {
 }
 
 void jump(Address NNN) {
+    assert(NNN <= 0x0FFF);
     PC->write(NNN);
 }
 
 void callSubroutine(Address NNN) {
+    assert(NNN <= 0x0FFF);
     functionStack->push(PC->read());
     jump(NNN);
 }
@@ -159,20 +166,45 @@ void shift(Reg *VX, Reg *VY) {
 }
 
 void setIndex(Address NNN) {
+    assert(NNN <= 0x0FFF);
     I->write(NNN);
 }
 
+void jumpWithOffset(Address NNN, bool superchip) {
+    Address address;
+    Nibble X = (0xF00 & NNN) >> 8;
+    Reg *VX = superchip ? registers[X] : registers[0];
+
+    address = NNN + VX->read();
+    assert(address < 4096);
+    jump(address);
+}
+
+void random(Reg *VX, Byte NN) {
+    std::uniform_int_distribution<> distrib(0, 0xFF);
+    Byte randomByte = static_cast<Byte>(distrib(gen));
+
+    VX->write(randomByte & NN);
+}
 
 void draw(Reg *VX, Reg *VY, Nibble N) {
-    display->draw(VX, VY, N);
+    std::vector<Byte> sprites(N);
+    Address addr = I->read();
+
+    for (int i = 0; i < N; i++) {
+        sprites[i] = ram->read(addr++);
+    }
+
+    Bit flag = display->draw(VX, VY, sprites, N);
+    VF->write_flag(flag);
 }
 
 // Instruction Decode
 void decode(Instruction instruction) {
     // 4-bit nibbles from instruction
-    Nibble X = (instruction & (0x0F00)) >> 16; // Lookup one of the 16 byte registers VX
-    Nibble Y = (instruction & (0x00F0)) >> 8;  // Lookup one of the 16 byte registers VY
-    Nibble N = (instruction & (0x000F)) >> 24; // A 4-bit number
+    Nibble X = (instruction & (0x0F00)) >> 8;  // Lookup one of the 16 byte registers VX
+    Nibble Y = (instruction & (0x00F0)) >> 4;  // Lookup one of the 16 byte registers VY
+    Nibble N = (instruction & (0x000F));       // A 4-bit number
 
     // 8-bit byte from instruction
     Byte NN = (instruction & (0x00FF));        // An 8-bit immediate number
@@ -207,6 +239,8 @@ void decode(Instruction instruction) {
 }
 
 int main(int argc, char *argv[]) {
+
+
     while (true) {
         Instruction instruction = ram->fetch(PC);
         decode(instruction);

@@ -15,3 +15,8 @@ Instruction RAM::fetch(AddressReg *pc) const {
     pc->write(addr);
     return lo | ((Instruction)hi << 8);
 }
+
+Byte RAM::read(Address addr) const {
+    assert(addr < 4096);
+    return memory[addr];
+}

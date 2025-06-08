@@ -1,6 +1,8 @@
 # ifndef DISPLAY_H
 # define DISPLAY_H
 
+# include <vector>
+
 # include "byte.h"
 # include "register.h"
 
@@ -13,7 +15,7 @@ class Display {
     public:
     Display();
     void clear();
-    void draw(Reg *VX, Reg *VY, Nibble N);
+    Bit draw(Reg *VX, Reg *VY, std::vector<Byte> sprite, Nibble N);
     void refresh();
 };
 

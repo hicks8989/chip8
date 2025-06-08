@@ -11,6 +11,7 @@ class RAM {
     public:
     RAM();
     Instruction fetch(AddressReg *pc) const;
+    Byte read(Address addr) const;
 };
 
 #endif
